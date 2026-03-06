@@ -3,88 +3,41 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>V2Ray Node Generator Dashboard</title>
-
 <style>
-body{
-background:#0a0a0a;
-color:white;
-font-family:monospace;
-text-align:center;
-padding:20px;
-margin:0;
-}
-
+body{background:#0a0a0a;color:white;font-family:monospace;text-align:center;padding:20px;margin:0;}
 h1{color:#22c55e;margin-bottom:5px;font-size:28px;text-shadow:0 0 8px #22c55e;}
 .app-name{color:#3b82f6;font-size:18px;margin-bottom:15px;}
-
-.warning{
-background:#7f1d1d;
-padding:10px;
-border-radius:8px;
-margin-bottom:15px;
-font-size:13px;
-color:#fecaca;
-}
-
-.tutorial{
-background:#111;
-padding:15px;
-border-radius:8px;
-margin:15px 0;
-text-align:left;
-line-height:1.6;
-font-size:14px;
-}
-
-button{
-padding:12px 20px;
-margin:6px;
-border:none;
-border-radius:10px;
-font-size:16px;
-cursor:pointer;
-transition:0.2s;
-}
-
+.warning{background:#7f1d1d;padding:10px;border-radius:8px;margin-bottom:15px;font-size:13px;color:#fecaca;}
+.tutorial{background:#111;padding:15px;border-radius:8px;margin:15px 0;text-align:left;line-height:1.6;font-size:14px;}
+button{padding:12px 20px;margin:6px;border:none;border-radius:10px;font-size:16px;cursor:pointer;transition:0.2s;}
 .gen{background:#22c55e;color:white;box-shadow:0 0 12px #22c55e;}
 .gen:hover{box-shadow:0 0 20px #22c55e;}
 .copy{background:#3b82f6;color:white;box-shadow:0 0 12px #3b82f6;}
 .copy:hover{box-shadow:0 0 20px #3b82f6;}
 .download{background:#f59e0b;color:white;box-shadow:0 0 12px #f59e0b;}
 .download:hover{box-shadow:0 0 20px #f59e0b;}
-
 select,input{padding:10px;margin:6px;border-radius:8px;border:none;font-size:14px;}
-textarea{width:95%;height:300px;margin-top:15px;background:#111;color:#00ff9d;border-radius:10px;padding:10px;font-size:12px;}
+#output{width:95%;height:300px;overflow:auto;background:#111;color:#00ff9d;border-radius:10px;padding:10px;font-family:monospace;text-align:left;}
 .stats{margin-top:10px;color:#94a3b8;font-size:13px;}
-.node-label-vless{color:#22c55e;font-weight:bold;}
-.node-label-vmess{color:#3b82f6;font-weight:bold;}
-.node-label-trojan{color:#f59e0b;font-weight:bold;}
 </style>
 </head>
-
 <body>
 <h1>⚡ V2Ray Node Generator</h1>
 <div class="app-name">App: V2RayGen Pro</div>
 
 <div class="warning">
-⚠️ Browser cannot check if nodes are online. Some nodes may be invalid.
+⚠ Browser cannot check if nodes are online. Soft anti-DDoS active: 5s cooldown per generation.
 </div>
 
 <div class="tutorial">
 <h2>How to Use</h2>
 <ol>
 <li>Select node type: <strong>All, VLESS, VMESS, or TROJAN</strong>.</li>
-<li>Set number of nodes to generate (1,000–20,000).</li>
-<li>Click <strong>Generate</strong> and watch progress.</li>
-<li>When done:
-<ul>
-<li>Click <strong>Copy</strong> to copy nodes.</li>
-<li>Click <strong>Download</strong> to save them.</li>
-</ul>
-</li>
-<li>⚠️ Note: Not all nodes may work.</li>
+<li>Set number of nodes (1,000–10,000 recommended).</li>
+<li>Click <strong>Generate</strong> and wait for progress.</li>
+<li>Copy or Download when finished.</li>
+<li>⚠ Some nodes may be invalid.</li>
 </ol>
-<p style="font-size:12px;color:#fecaca;">Tip: ≤10,000 nodes is smoother on mobile.</p>
 </div>
 
 <div>
@@ -94,83 +47,115 @@ textarea{width:95%;height:300px;margin-top:15px;background:#111;color:#00ff9d;bo
 <option value="vmess">VMESS</option>
 <option value="trojan">TROJAN</option>
 </select>
-<input id="amount" type="number" value="10000" min="1000" max="20000">
+<input id="amount" type="number" value="10000" min="1000" max="10000">
 </div>
 
-<button class="gen" onclick="generate()">Generate</button>
+<button class="gen" id="generateBtn" onclick="generate()">Generate</button>
 <button class="copy" onclick="copyText()">Copy</button>
 <button class="download" onclick="download()">Download</button>
 
 <div class="stats" id="status">Idle</div>
 <div class="stats" id="progress">0 / 0</div>
-<textarea id="output"></textarea>
+<div id="output"></div>
 
 <script>
-const sources=[
-"https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/vless_configs.txt"
+const sources = [
+"https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/V2Ray-Config-By-EbraSha-All-Type.txt",
+"https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/vless_configs.txt",
+"https://github.com/Epodonios/v2ray-configs/raw/main/Splitted-By-Protocol/vless.txt",
+"https://raw.githubusercontent.com/Firmfox/Proxify/refs/heads/main/v2ray_configs/mixed/subscription-1.txt"
 ];
 
+let cooldown = false;
+
+function showWarning(msg){
+document.getElementById("status").innerHTML =
+`<span style="color:#ff5555;font-weight:bold;">${msg}</span>`;
+}
+
 function colorNode(node){
-if(node.toLowerCase().startsWith("vless")) return `<span class="node-label-vless">${node}</span>`;
-if(node.toLowerCase().startsWith("vmess")) return `<span class="node-label-vmess">${node}</span>`;
-if(node.toLowerCase().startsWith("trojan")) return `<span class="node-label-trojan">${node}</span>`;
+if(node.toLowerCase().startsWith("vless"))
+return `<span style="color:#22c55e">${node}</span>`;
+if(node.toLowerCase().startsWith("vmess"))
+return `<span style="color:#3b82f6">${node}</span>`;
+if(node.toLowerCase().startsWith("trojan"))
+return `<span style="color:#f59e0b">${node}</span>`;
 return node;
 }
 
 async function generate(){
-let status=document.getElementById("status");
-let progress=document.getElementById("progress");
-let output=document.getElementById("output");
-let type=document.getElementById("type").value;
-let amount=parseInt(document.getElementById("amount").value);
+if(cooldown){
+showWarning("⚠ Please wait 5 seconds before generating again");
+return;
+}
+cooldown = true;
+setTimeout(()=>{cooldown=false;},5000);
 
-status.innerText="Fetching latest nodes...";
-let all=[];
-for(let s of sources){
+let status = document.getElementById("status");
+let progress = document.getElementById("progress");
+let output = document.getElementById("output");
+
+let type = document.getElementById("type").value;
+let amount = parseInt(document.getElementById("amount").value);
+
+status.innerText = "Fetching node lists...";
+
+let all = [];
+
+for (let src of sources){
 try{
-let r=await fetch(s+"?t="+Date.now());
-let t=await r.text();
-let nodes=t.split("\n").filter(x=>x.trim()!="");
-all=all.concat(nodes);
-}catch(e){console.log("source error")}
+let r = await fetch(src + "?cache=" + Date.now());
+let t = await r.text();
+let nodes = t.split("\n").map(x=>x.trim()).filter(x=>x!="");
+all = all.concat(nodes);
+}catch(e){
+console.log("source failed:", src);
+}
 }
 
-let unique=[...new Set(all)];
-if(type!="all"){unique=unique.filter(x=>x.toLowerCase().startsWith(type))}
+status.innerText = "Cleaning node list...";
 
-status.innerText="Nodes available: "+unique.length;
+let unique = [...new Set(all)];
+if(type!="all"){
+unique = unique.filter(x=>x.toLowerCase().startsWith(type));
+}
 
-let chunk=500, done=0, result="";
+status.innerText = "Total unique nodes: " + unique.length;
+
+let chunk = 400;
+let done = 0;
+let result = "";
 
 function step(){
 for(let i=0;i<chunk;i++){
-let node=unique[Math.floor(Math.random()*unique.length)];
-result+=node+"\n";
+let node = unique[Math.floor(Math.random()*unique.length)];
+result += node + "\n";
 done++;
 }
-progress.innerText=`Generated ${done} / ${amount}`;
-output.value=result;
-if(done<amount){setTimeout(step,5);}
-else{status.innerText="Done ✅";}
+progress.innerText = `Generated ${done} / ${amount}`;
+output.innerHTML = result.split("\n").map(colorNode).join("<br>");
+if(done < amount){setTimeout(step,5);}
+else{
+status.innerHTML = `<span style="color:#22c55e;">✔ Generation complete</span>`;
+}
 }
 step();
 }
 
 function copyText(){
-let text=document.getElementById("output");
-text.select();
-document.execCommand("copy");
-alert("Copied!");
+let text = document.getElementById("output").innerText;
+navigator.clipboard.writeText(text);
+alert("Copied to clipboard");
 }
 
 function download(){
-let data=document.getElementById("output").value;
-let blob=new Blob([data],{type:"text/plain"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="nodes.txt";
+let data = document.getElementById("output").innerText;
+let blob = new Blob([data],{type:"text/plain"});
+let a = document.createElement("a");
+a.href = URL.createObjectURL(blob);
+a.download = "nodes.txt";
 a.click();
 }
 </script>
 </body>
-  </html>
+</html>
