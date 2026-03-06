@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MEGA Node Generator</title>
+
+<style>
+
+body{
+background:#020617;
+color:white;
+font-family:monospace;
+text-align:center;
+padding:20px;
+}
+
+h1{
+color:#22c55e;
+}
+
+.warning{
+background:#7f1d1d;
+padding:12px;
+border-radius:8px;
+margin-bottom:15px;
+color:#fecaca;
+font-size:13px;
+}
+
+button{
+padding:12px 18px;
+margin:6px;
+border:none;
+border-radius:8px;
+font-size:15px;
+cursor:pointer;
+}
+
+.gen{background:#22c55e;color:white;}
+.copy{background:#3b82f6;color:white;}
+.download{background:#f59e0b;color:white;}
+
+.stats{
+margin-top:10px;
+color:#94a3b8;
+}
+
+textarea{
+width:95%;
+height:350px;
+margin-top:15px;
+background:black;
+color:#00ff9d;
+border-radius:10px;
+padding:10px;
+font-size:12px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>⚡ MEGA Node Generator</h1>
+
+<div class="warning">
+⚠️ WARNING: Browser ping checks are limited.  
+This website cannot perform real ICMP ping tests.  
+Only basic connection attempts are used to estimate availability.
+</div>
+
+<button class="gen" onclick="generate()">Generate</button>
+<button class="copy" onclick="copyText()">Copy</button>
+<button class="download" onclick="download()">Download</button>
+
+<div class="stats" id="status">Idle</div>
+<div class="stats" id="counter"></div>
+
+<textarea id="output"></textarea>
+
+<script>
+
+const sources = [
+
+"https://raw.githubusercontent.com/ebrasha/free-v2ray-public-list/refs/heads/main/vless_configs.txt",
+"https://raw.githubusercontent.com/barry-far/V2ray-Configs/main/All_Configs.txt",
+"https://raw.githubusercontent.com/mahdibland/V2RayAggregator/master/sub/sub_merge.txt"
+
+]
+
+async function generate(){
+
+let status=document.getElementById("status")
+let counter=document.getElementById("counter")
+let output=document.getElementById("output")
+
+status.innerText="Downloading nodes..."
+
+let all=[]
+
+for(let s of sources){
+
+try{
+
+let r=await fetch(s)
+let t=await r.text()
+
+let nodes=t.split("\n").filter(x=>x!="")
+
+all=all.concat(nodes)
+
+}catch(e){}
+
+}
+
+status.innerText="Total nodes loaded: "+all.length
+
+let result=""
+
+let amount=100000
+
+for(let i=0;i<amount;i++){
+
+let node=all[Math.floor(Math.random()*all.length)]
+
+result+=node+"\n"
+
+if(i%1000==0){
+
+counter.innerText="Generated "+i+" / "+amount
+
+}
+
+}
+
+output.value=result
+
+status.innerText="Done ✅"
+
+counter.innerText="Generated "+amount+" nodes"
+
+}
+
+function copyText(){
+
+let text=document.getElementById("output")
+
+text.select()
+
+document.execCommand("copy")
+
+alert("Copied!")
+
+}
+
+function download(){
+
+let data=document.getElementById("output").value
+
+let blob=new Blob([data],{type:"text/plain"})
+
+let a=document.createElement("a")
+
+a.href=URL.createObjectURL(blob)
+
+a.download="nodes.txt"
+
+a.click()
+
+}
+
+</script>
+
+</body>
+  </html>
