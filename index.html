@@ -1,159 +1,29 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>V2Ray Node Generator Dashboard</title>
-<style>
-body{background:#0a0a0a;color:white;font-family:monospace;text-align:center;padding:20px;margin:0;}
-h1{color:#22c55e;margin-bottom:5px;font-size:28px;text-shadow:0 0 8px #22c55e;}
-.app-name{color:#3b82f6;font-size:18px;margin-bottom:15px;}
-.warning{background:#7f1d1d;padding:10px;border-radius:8px;margin-bottom:15px;font-size:13px;color:#fecaca;}
-.tutorial{background:#111;padding:15px;border-radius:8px;margin:15px 0;text-align:left;line-height:1.6;font-size:14px;}
-button{padding:12px 20px;margin:6px;border:none;border-radius:10px;font-size:16px;cursor:pointer;transition:0.2s;}
-.gen{background:#22c55e;color:white;box-shadow:0 0 12px #22c55e;}
-.gen:hover{box-shadow:0 0 20px #22c55e;}
-.copy{background:#3b82f6;color:white;box-shadow:0 0 12px #3b82f6;}
-.copy:hover{box-shadow:0 0 20px #3b82f6;}
-.download{background:#f59e0b;color:white;box-shadow:0 0 12px #f59e0b;}
-.download:hover{box-shadow:0 0 20px #f59e0b;}
-select,input{padding:10px;margin:6px;border-radius:8px;border:none;font-size:14px;}
-#output{width:95%;height:300px;overflow:auto;background:#111;color:#00ff9d;border-radius:10px;padding:10px;font-family:monospace;text-align:left;}
-.stats{margin-top:10px;color:#94a3b8;font-size:13px;}
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>V2Ray + AI Generator</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>⚡ V2Ray Node Generator</h1>
-<div class="app-name">App: V2RayGen Pro</div>
+    <div class="container">
+        <h1>V2Ray Node Generator + AI Talk</h1>
 
-<div class="warning">
-⚠ Browser cannot check if nodes are online. Soft anti-DDoS active: 5s cooldown per generation.
-</div>
+        <!-- V2Ray Generator Section -->
+        <section>
+            <h2>Generate V2Ray Nodes</h2>
+            <button id="generate">Generate Nodes</button>
+            <pre id="output"></pre>
+        </section>
 
-<div class="tutorial">
-<h2>How to Use</h2>
-<ol>
-<li>Select node type: <strong>All, VLESS, VMESS, or TROJAN</strong>.</li>
-<li>Set number of nodes (1,000–10,000 recommended).</li>
-<li>Click <strong>Generate</strong> and wait for progress.</li>
-<li>Copy or Download when finished.</li>
-<li>⚠ Some nodes may be invalid.</li>
-</ol>
-</div>
+        <!-- AI Talk Section -->
+        <section>
+            <h2>AI Talk</h2>
+            <button id="ai_talker">Go to AI-Talker</button>
+        </section>
+    </div>
 
-<div>
-<select id="type">
-<option value="all">All</option>
-<option value="vless">VLESS</option>
-<option value="vmess">VMESS</option>
-<option value="trojan">TROJAN</option>
-</select>
-<input id="amount" type="number" value="10000" min="1000" max="10000">
-</div>
-
-<button class="gen" id="generateBtn" onclick="generate()">Generate</button>
-<button class="copy" onclick="copyText()">Copy</button>
-<button class="download" onclick="download()">Download</button>
-
-<div class="stats" id="status">Idle</div>
-<div class="stats" id="progress">0 / 0</div>
-<div id="output"></div>
-
-<script>
-const sources = [
-"https://github.com/Epodonios/v2ray-configs/raw/main/Splitted-By-Protocol/vless.txt",
-"https://raw.githubusercontent.com/Firmfox/Proxify/refs/heads/main/v2ray_configs/mixed/subscription-1.txt"
-];
-
-let cooldown = false;
-
-function showWarning(msg){
-document.getElementById("status").innerHTML =
-`<span style="color:#ff5555;font-weight:bold;">${msg}</span>`;
-}
-
-function colorNode(node){
-if(node.toLowerCase().startsWith("vless"))
-return `<span style="color:#22c55e">${node}</span>`;
-if(node.toLowerCase().startsWith("vmess"))
-return `<span style="color:#3b82f6">${node}</span>`;
-if(node.toLowerCase().startsWith("trojan"))
-return `<span style="color:#f59e0b">${node}</span>`;
-return node;
-}
-
-async function generate(){
-if(cooldown){
-showWarning("⚠ Please wait 5 seconds before generating again");
-return;
-}
-cooldown = true;
-setTimeout(()=>{cooldown=false;},5000);
-
-let status = document.getElementById("status");
-let progress = document.getElementById("progress");
-let output = document.getElementById("output");
-
-let type = document.getElementById("type").value;
-let amount = parseInt(document.getElementById("amount").value);
-
-status.innerText = "Fetching node lists...";
-
-let all = [];
-
-for (let src of sources){
-try{
-let r = await fetch(src + "?cache=" + Date.now());
-let t = await r.text();
-let nodes = t.split("\n").map(x=>x.trim()).filter(x=>x!="");
-all = all.concat(nodes);
-}catch(e){
-console.log("source failed:", src);
-}
-}
-
-status.innerText = "Cleaning node list...";
-
-let unique = [...new Set(all)];
-if(type!="all"){
-unique = unique.filter(x=>x.toLowerCase().startsWith(type));
-}
-
-status.innerText = "Total unique nodes: " + unique.length;
-
-let chunk = 400;
-let done = 0;
-let result = "";
-
-function step(){
-for(let i=0;i<chunk;i++){
-let node = unique[Math.floor(Math.random()*unique.length)];
-result += node + "\n";
-done++;
-}
-progress.innerText = `Generated ${done} / ${amount}`;
-output.innerHTML = result.split("\n").map(colorNode).join("<br>");
-if(done < amount){setTimeout(step,5);}
-else{
-status.innerHTML = `<span style="color:#22c55e;">✔ Generation complete</span>`;
-}
-}
-step();
-}
-
-function copyText(){
-let text = document.getElementById("output").innerText;
-navigator.clipboard.writeText(text);
-alert("Copied to clipboard");
-}
-
-function download(){
-let data = document.getElementById("output").innerText;
-let blob = new Blob([data],{type:"text/plain"});
-let a = document.createElement("a");
-a.href = URL.createObjectURL(blob);
-a.download = "nodes.txt";
-a.click();
-}
-</script>
+    <script src="script.js"></script>
 </body>
 </html>
